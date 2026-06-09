@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stars Shop</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: rgba(255,255,255,0.07);
+    --star: #FFD700;
+    --star-glow: rgba(255,215,0,0.15);
+    --text: #f0f0f5;
+    --text-muted: #8888aa;
+    --accent: #7B61FF;
+    --accent-glow: rgba(123,97,255,0.2);
+    --green: #22c55e;
+    --radius: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  .nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 0;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    transition: color 0.2s;
+  }
+  .nav-btn.active { color: var(--star); }
+  .nav-btn svg { width: 22px; height: 22px; }
+
+  /* PAGES */
+  .page { display: none; padding: 16px 16px 80px; }
+  .page.active { display: block; }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    padding: 24px 0 20px;
+  }
+  .logo {
+    width: 64px; height: 64px;
+    background: var(--star-glow);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    margin: 0 auto 12px;
+    border: 1px solid rgba(255,215,0,0.2);
+  }
+  .header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .header p { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+
+  /* RATE BADGE */
+  .rate-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--star-glow);
+    border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--star);
+    margin: 12px auto 0;
+  }
+
+  /* PACKS GRID */
+  .packs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .pack-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 12px;
+    cursor: pointer;
+    transition: all 0.18s;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+  .pack-card:active { transform: scale(0.97); }
+  .pack-card.popular {
+    border-color: rgba(255,215,0,0.35);
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(255,215,0,0.05) 100%);
+  }
+  .pack-card .badge {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: var(--star);
+    color: #000;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 6px;
+    text-transform: uppercase;
+  }
+  .pack-stars {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--star);
+    letter-spacing: -1px;
+  }
+  .pack-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: 2px 0 10px;
+  }
+  .pack-price {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 40px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+  .modal-stars {
+    text-align: center;
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--star);
+    letter-spacing: -2px;
+  }
+  .modal-stars span { font-size: 18px; color: var(--text-muted); font-weight: 500; }
+  .modal-price {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 800;
+    margin: 4px 0 20px;
+  }
+  .pay-methods { display: flex; flex-direction: column; gap: 10px; }
+  .pay-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+  }
+  .pay-btn:active { transform: scale(0.98); background: #222230; }
+  .pay-btn .pay-icon { font-size: 24px; }
+  .pay-btn .pay-name { font-size: 15px; font-weight: 600; text-align: left; }
+  .pay-btn .pay-desc { font-size: 12px; color: var(--text-muted); text-align: left; }
+  .modal-close {
+    width: 100%;
+    margin-top: 12px;
+    padding: 14px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+  }
+
+  /* ORDERS PAGE */
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    letter-spacing: -0.3px;
+  }
+  .order-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .order-icon {
+    width: 42px; height: 42px;
+    background: var(--star-glow);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .order-info { flex: 1; }
+  .order-stars { font-size: 15px; font-weight: 700; }
+  .order-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .order-status {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 8px;
+  }
+  .status-done { background: rgba(34,197,94,0.15); color: var(--green); }
+  .status-wait { background: rgba(255,215,0,0.1); color: var(--star); }
+  .empty-state {
+    text-align: center;
+    padding: 48px 0;
+    color: var(--text-muted);
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* INFO PAGE */
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--text);
+    transition: background 0.15s;
+  }
+  .info-card:active { background: var(--surface2); }
+  .info-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .info-icon.purple { background: rgba(123,97,255,0.15); }
+  .info-icon.blue { background: rgba(56,189,248,0.15); }
+  .info-icon.orange { background: rgba(251,146,60,0.15); }
+  .info-icon.green { background: rgba(34,197,94,0.15); }
+  .info-title { font-size: 15px; font-weight: 600; }
+  .info-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .info-arrow { margin-left: auto; color: var(--text-muted); font-size: 18px; }
+
+  /* PROMO */
+  .promo-section {
+    background: linear-gradient(135deg, rgba(123,97,255,0.15), rgba(255,215,0,0.08));
+    border: 1px solid rgba(123,97,255,0.25);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .promo-section h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+  .promo-input-row { display: flex; gap: 8px; align-items: center; }
+  .promo-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .promo-input::placeholder { color: var(--text-muted); letter-spacing: 0; text-transform: none; }
+  .promo-submit {
+    flex-shrink: 0;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .promo-submit:active { opacity: 0.8; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    top: 20px; left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 300;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- PAGE: SHOP -->
+<div class="page active" id="page-shop">
+  <div class="header">
+    <div class="logo">⭐</div>
+    <h1>Магазин Stars</h1>
+    <p>Telegram Stars для вашего аккаунта</p>
+    <div class="rate-badge">⭐ 1 Star ≈ 1.35 ₽</div>
+  </div>
+
+  <div class="promo-section">
+    <h3>🎟 Есть промокод?</h3>
+    <div class="promo-input-row">
+      <input class="promo-input" id="promoInput" placeholder="Введите промокод" maxlength="20">
+      <button class="promo-submit" onclick="applyPromo()">Применить</button>
+    </div>
+  </div>
+
+  <div class="packs-grid" id="packsGrid"></div>
+</div>
+
+<!-- PAGE: ORDERS -->
+<div class="page" id="page-orders">
+  <div class="section-title">Мои заказы</div>
+  <div id="ordersList">
+    <div class="empty-state">
+      <div class="empty-icon">📦</div>
+      <p>Заказов пока нет</p>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: INFO -->
+<div class="page" id="page-info">
+  <div class="section-title">Информация</div>
+
+  <a class="info-card" href="https://telegra.ph/Politika-konfidencialnosti-04-01-26" target="_blank">
+    <div class="info-icon purple">📄</div>
+    <div>
+      <div class="info-title">Политика конфиденциальности</div>
+      <div class="info-sub">Как мы используем ваши данные</div>
+    </div>
+    <div class="info-arrow">›</div>
+  </a>
+
+  <a class="info-card" href="https://telegra.ph/Polzovatelskoe-soglashenie-04-01-19" target="_blank">
+    <div class="info-icon blue">📋</div>
+    <div>
+      <div class="info-title">Пользовательское соглашение</div>
+      <div class="info-sub">Условия использования сервиса</div>
+    </div>
+    <div class="info-arrow">›</div>
+  </a>
+
+  <a class="info-card" href="https://t.me/klleVii" target="_blank">
+    <div class="info-icon orange">🆘</div>
+    <div>
+      <div class="info-title">Поддержка</div>
+      <div class="info-sub">Время ответа — до 30 минут</div>
+    </div>
+    <div class="info-arrow">›</div>
+  </a>
+
+  <div class="info-card" style="cursor:default;">
+    <div class="info-icon green">⭐</div>
+    <div>
+      <div class="info-title">О магазине</div>
+      <div class="info-sub">Быстрая выдача · Несколько способов оплаты</div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('shop', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+    </svg>
+    Магазин
+  </button>
+  <button class="nav-btn" onclick="showPage('orders', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+    </svg>
+    Заказы
+  </button>
+  <button class="nav-btn" onclick="showPage('info', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+    </svg>
+    Инфо
+  </button>
+</nav>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-stars" id="modalStars">100 <span>Stars</span></div>
+    <div class="modal-price" id="modalPrice">135 ₽</div>
+    <div class="pay-methods">
+      <button class="pay-btn" onclick="selectPayment('yoomoney')">
+        <span class="pay-icon">💛</span>
+        <div>
+          <div class="pay-name">ЮMoney</div>
+          <div class="pay-desc">Карта или кошелёк ЮMoney</div>
+        </div>
+      </button>
+      <button class="pay-btn" onclick="selectPayment('card')">
+        <span class="pay-icon">🤝</span>
+        <div>
+          <div class="pay-name">Перевод на карту</div>
+          <div class="pay-desc">СБП — любой банк</div>
+        </div>
+      </button>
+    </div>
+    <button class="modal-close" onclick="closeModal()">Отмена</button>
+  </div>
+</div>
+
+<script>
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.setHeaderColor('#0a0a0f');
+    tg.setBackgroundColor('#0a0a0f');
+  }
+
+  const PACKS = [
+    { stars: 50,   price: 65,   label: 'Старт' },
+    { stars: 100,  price: 135,  label: 'Базовый' },
+    { stars: 250,  price: 330,  label: 'Средний' },
+    { stars: 500,  price: 666,  label: 'Большой', popular: true },
+    { stars: 1000, price: 1320, label: 'Максимум' },
+    { stars: 2500, price: 3300, label: 'Бизнес' },
+    { stars: 5000, price: 5699, label: 'Премиум' },
+  ];
+
+  let selectedPack = null;
+
+  // Render packs
+  const grid = document.getElementById('packsGrid');
+  PACKS.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'pack-card' + (p.popular ? ' popular' : '');
+    card.innerHTML = `
+      ${p.popular ? '<div class="badge">Хит</div>' : ''}
+      <div class="pack-stars">${p.stars}</div>
+      <div class="pack-label">Telegram Stars</div>
+      <div class="pack-price">${p.price.toLocaleString('ru')} ₽</div>
+    `;
+    card.onclick = () => openModal(p);
+    grid.appendChild(card);
+  });
+
+  function showPage(name, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function openModal(pack) {
+    selectedPack = pack;
+    document.getElementById('modalStars').innerHTML = `${pack.stars} <span>Stars</span>`;
+    document.getElementById('modalPrice').textContent = pack.price.toLocaleString('ru') + ' ₽';
+    document.getElementById('modal').classList.add('show');
+  }
+
+  function closeModal(e) {
+    if (!e || e.target === document.getElementById('modal')) {
+      document.getElementById('modal').classList.remove('show');
+    }
+  }
+
+  function selectPayment(method) {
+    if (!selectedPack) return;
+    const methodName = method === 'yoomoney' ? 'yoomoney' : 'card';
+    const data = `buy_${selectedPack.stars}_${selectedPack.price}_${methodName}`;
+    if (tg) {
+      tg.sendData(data);
+    } else {
+      showToast('Открой в Telegram!');
+    }
+    closeModal();
+  }
+
+  function applyPromo() {
+    const code = document.getElementById('promoInput').value.trim().toUpperCase();
+    if (!code) return;
+    if (tg) {
+      tg.sendData('promo_' + code);
+      showToast('Промокод отправлен!');
+    } else {
+      showToast('Открой в Telegram!');
+    }
+    document.getElementById('promoInput').value = '';
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
